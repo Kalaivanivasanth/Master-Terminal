@@ -1,0 +1,87 @@
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using MTNBaseClasses.BaseClasses.Web;
+using MTNWebPages.PageObjects.Mobile_Apps;
+using MTNWebPages.PageObjects.Mobile_Apps.Delays;
+using System;
+using MTNGlobal.EnumsStructs;
+using DataObjects.LogInOutBO;
+
+namespace MTNAutomationTests.TestCases.Web.Mobile_Apps.Cargo_Apps.Delays
+{
+    [TestClass, TestCategory(TestCategories.Web)]
+    public class TestCase37585 : MobileAppsBase
+    {
+        
+        [ClassInitialize]
+        public static void ClassInitialize(TestContext testContext) => BaseClassInitialize_New(testContext);
+
+        [TestInitialize]
+        public new void TestInitialize() {}
+
+        [TestCleanup]
+        public new void TestCleanup() => base.TestCleanup();
+        
+        void MTNInitialize()
+        {
+            LogInto<MobileAppsLogInOutBO>();
+            HomePage = new MA_TilesPage(TestContext);
+        }
+
+        [TestMethod]
+        public void AddedDamagedContainerDelay()
+        {
+            MTNInitialize();
+
+            var currentTimeStamp = DateTime.Now;
+            
+            // Step 2
+            HomePage.ClickTile(HomePage.BtnDelays);
+
+            // Step 3
+            MA_DelaysPage delaysPage = new MA_DelaysPage(TestContext);
+
+            // Step 4
+            delaysPage.DoMachine();
+
+            // Step 5
+            MA_DelaysMachinePage delayMachinePage = new MA_DelaysMachinePage(TestContext);
+            delayMachinePage.AddDelayToMachine(@"CRN1");
+
+            // Step 6
+            MA_MachineDelaysPage machineDelays = new MA_MachineDelaysPage(TestContext);
+            machineDelays.DoAddNewDelay();
+
+            MA_MachineDelayNewDetailsPage machineDelayDetailsPage = new MA_MachineDelayNewDetailsPage(TestContext);
+
+            currentTimeStamp = currentTimeStamp.AddMinutes(60);
+            string[,] fieldValueToSet = 
+            {
+                { MA_MachineDelayNewDetailsPage.constDelayType, @"Damaged Container" },
+                { MA_MachineDelayNewDetailsPage.constVoyage, @"MSCK000002 - MSC KATYA R." },
+                {
+                    MA_MachineDelayNewDetailsPage.constDelayEstimatedEnd,
+                    currentTimeStamp.ToString(@"dd/MM/yyyy") + "|" + currentTimeStamp.ToString("hh:mm")
+                }
+            };
+            machineDelayDetailsPage.SetFields(fieldValueToSet);
+            var delayStartDateTime = machineDelayDetailsPage.GetEnteredDateTime(MA_MachineDelayNewDetailsPage.constDelayStart);
+            var delayEstEndDateTime = machineDelayDetailsPage.GetEnteredDateTime(MA_MachineDelayNewDetailsPage.constDelayEstimatedEnd);
+            machineDelayDetailsPage.DoSave();
+
+            // Step 7
+            machineDelays = new MA_MachineDelaysPage(TestContext);
+
+            string[] fieldValueToCheck =
+            {
+                @"MSCK000002 - MSC KATYA R.",
+                @"Damaged Container",
+                @"Start " + delayStartDateTime.ToString("dd/MM/yyyy h:mm tt").ToLower(),
+                @"Est End " + delayEstEndDateTime.ToString("dd/MM/yyyy h:mm tt").ToLower()
+            };
+
+        }
+
+        
+
+    }
+}

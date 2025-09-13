@@ -1,0 +1,78 @@
+﻿using DataObjects.LogInOutBO;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using MTNArguments.Classes;
+using MTNBaseClasses.BaseClasses.MasterTerminal;
+using MTNForms.FormObjects;
+using MTNForms.FormObjects.Gate_Functions.Release_Request;
+using MTNForms.FormObjects.Message_Dialogs;
+using MTNForms.FormObjects.Yard_Functions.Cargo_Review;
+using MTNGlobal.EnumsStructs;
+using MTNUtilityClasses.Classes;
+
+namespace MTNAutomationTests.TestCases.Master_Terminal.Yard_Functions.Cargo_Review
+{
+    [TestClass, TestCategory(TestCategories.MTN)]
+    public class TestCase60765 : MTNBase
+    {
+
+        const string CargoGroupId = "CG60765";
+        
+        [ClassInitialize]
+        public static void ClassInitialize(TestContext testContext) => BaseClassInitialize_New(testContext);
+        
+        [TestInitialize]
+        public new void TestInitialize() {}
+
+        [TestCleanup]
+        public new void TestCleanup() => base.TestCleanup();
+
+        void MTNInitialize() => LogInto<MTNLogInOutBO>("MTNCOO");
+
+
+        [TestMethod]
+        public void ReleaseRequestTrackedByQtyNoReserveDetailsWithCOO()
+        {
+            MTNInitialize();
+            
+            FormObjectBase.MainForm.OpenCargoReviewFromToolbar();
+            CargoReviewForm.DoSelectorQuery(new[]
+            {
+                new SelectorQueryArguments(CargoReviewForm.Property.Site, CargoReviewForm.Operation.EqualTo, "On Site"),
+                new SelectorQueryArguments(CargoReviewForm.Property.CargoGroupId, CargoReviewForm.Operation.StartsWith, CargoGroupId),
+            });
+            CargoReviewForm.DoSearch();
+
+            DoReleaseRequestProcess(CargoReviewForm.QueryResultsContextMenu.CreateReleaseRequestRoad, "60765Road2",
+                ReleaseRequestAddForm.ReleaseType.Road);
+            DoReleaseRequestProcess(CargoReviewForm.QueryResultsContextMenu.CreateReleaseRequestShip, "60765Ship2",
+                ReleaseRequestAddForm.ReleaseType.Ship);
+            DoReleaseRequestProcess(CargoReviewForm.QueryResultsContextMenu.CreateReleaseRequestRail, "60765Rail2",
+                ReleaseRequestAddForm.ReleaseType.Rail);
+        }
+
+        void DoReleaseRequestProcess(string menuOptionToSelect, string releaseNo, string releaseType)
+        {
+            CargoReviewForm.OpenRequiredContextMenuForCreate(menuOptionToSelect);
+
+            ReleaseRequestAddForm.CheckCorrectData(new[]
+            {
+                new MTNGeneralArguments.FieldRowNameValueArguments() { FieldRowName = ReleaseRequestAddForm.RowNames.ReleaseType , FieldRowValue = releaseType},
+            });
+            ReleaseRequestAddForm.SetHeaderOrReserveDetails("<New request>",
+                new[] { new ReleaseRequestArguments("Release No", releaseNo) });
+            ReleaseRequestAddForm.DoSaveStatic();
+
+            WarningErrorForm.CheckErrorMessagesExist("Errors for Release Request update TT1",
+                new[]
+                { $"Code :96294. Item {CargoGroupId} has 100 of 100000 Items already reserved plus 8000 Items in current ownership changes, cannot release further 99900 Items", });
+
+            ReleaseRequestAddForm.DoCancelStatic();
+
+            ConfirmationFormYesNo confirmationFormYesNo = new ConfirmationFormYesNo("Are you sure?");
+            confirmationFormYesNo.ConfirmationFormYes();
+
+            FormObjectBase.DeleteFormFromFormManager<ReleaseRequestAddForm>(); 
+        }
+    }
+
+}
